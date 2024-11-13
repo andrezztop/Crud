@@ -1,0 +1,11 @@
+.container{
+    background-color: gray;
+    border-radius: 3px;
+}
+
+.mb-4{
+    font-family: cursive;
+    text-align: center;
+    font-size: 30px;
+    background-color: rgba(38, 181, 181, 0.279);
+}

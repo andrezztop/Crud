@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Producto</title>
+    <link href="style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Formulario de Producto</h1>
+        <form id="productForm">
+            <div class="mb-3">
+                <label for="title" class="form-label">Título</label>
+                <input type="text" class="form-control" id="title" required>
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">Descripción</label>
+                <textarea class="form-control" id="description" rows="3" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="category" class="form-label">Categoría</label>
+                <input type="text" class="form-control" id="category" required>
+                <select name="categ" id="drop">
+                    <option value="ropa">Ropa</option>
+                    <option value="belleza">Belleza</option>
+                    <option value="tecnologia">Tecnología</option>
+                    <option value="medicina">Medicina</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="price" class="form-label">Precio</label>
+                <input type="number" class="form-control" id="price" step="0.01" required>
+            </div>
+            <div class="mb-3">
+                <label for="discountPercentage" class="form-label">Porcentaje de Descuento</label>
+                <input type="number" class="form-control" id="discountPercentage" step="0.01" required>
+            </div>
+            <div class="mb-3">
+                <label for="stock" class="form-label">Estado de Stock</label>
+                <span id="stock" class="form-control">Disponible</span> <!-- Cambiado a un span -->
+            </div>
+            <div class="mb-3">
+                <label for="tags" class="form-label">Etiquetas</label>
+                <input type="text" class="form-control" id="tags">
+                <button type="button" class="btn btn-secondary mt-2" id="add-tag-btn">Agregar Etiquetas</button>
+                <div id="tag-list" class="mt-2"></div>
+            </div>
+            <div class="mb-3">
+                <label for="images" class="form-label">Imágenes</label>
+                <input type="file" class="form-control" id="images" multiple required>
+            </div>
+            <div class="mb-3">
+                <label for="brand" class="form-label">Marca</label>
+                <input type="text" class="form-control" id="brand" required>
+            </div>
+            <div class="mb-3">
+                <label for="sku" class="form-label">SKU</label>
+                <input type="text" class="form-control" id="sku" required>
+            </div>
+            <div class="mb-3">
+                <label for="weight" class="form-label">Peso</label>
+                <input type="number" class="form-control" id="weight" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Dimensiones (Largo, Ancho, Alto)</label>
+                <div class="row">
+                    <div class="col">
+                        <input type="number" class="form-control" id="length" placeholder="Largo (X)" step="0.01" required>
+                    </div>
+                    <div class="col">
+                        <input type="number" class="form-control" id="width" placeholder="Ancho (Y)" step="0.01" required>
+                    </div>
+                    <div class="col">
+                        <input type="number" class="form-control" id="height" placeholder="Alto (Z)" step="0.01" required>
