@@ -26,17 +26,15 @@
       </div>
 
       <!-- Data Table Area -->
-      <div class="bg-white rounded-lg shadow-sm min-h-[400px] relative">
-        <div v-if="!hasData" class="absolute inset-0 flex items-center justify-center text-gray-400">
-          Datatable placeholder
-        </div>
-        
-        <!-- Table content would go here when there's data -->
-        <table v-else class="w-full">
-          <!-- Table content -->
-        </table>
-      </div>
-
+      <DataTable :columns="columns" :options="options" class="display">
+          <thead>
+              <tr>
+                  <th>First</th>
+                  <th>Second</th>
+              </tr>
+          </thead>
+      </DataTable>
+      
       <!-- Add Button -->
       <div class="flex justify-end">
         <button
@@ -52,10 +50,31 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import DataTable from 'datatables.net-vue3';
+import DataTablesCore from 'datatables.net-dt';
+import 'datatables.net-responsive';
+import 'datatables.net-select';
+import language from 'datatables.net-plugins/i18n/es-ES.mjs';
+import { Search } from 'lucide-react';
+ 
+DataTable.use(DataTablesCore);
+
+const options = {
+  responsive: true,
+  select: true,
+  language: language,
+  searching:false
+};
 
 const searchQuery = ref('')
-const data = ref([])
-
+const columns = [
+  { data: 'name', title: 'Nombre' },
+  { data: 'descripcion', title: 'Descripcion' },
+  { data: 'category', title: 'Categoria' },
+  { data: 'desc', title: 'Descuento' },
+  { data: 'precio', title: 'Precio' },
+  { data: 'action', title: 'Acciones' },
+];
 const hasData = computed(() => data.value.length > 0)
 
 const handleAdd = () => {
