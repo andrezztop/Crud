@@ -1,66 +1,57 @@
 export async function getProduct() {
   try {
-    const resp = await fetch("http://localhost:8080/products", {
-      credentials: 'include'
-    });
+    const resp = await fetch("http://localhost:8080/products");
 
     if (!resp.ok) {
-      throw new Error(`¡Error HTTP! Estado: ${resp.status}`);
+      throw new Error(`HTTP error! Status: ${resp.status}`);
     }
 
     const data = await resp.json();
     return data;
   } catch (error) {
-    console.error("Error al obtener los productos:", error);
-    throw error;
+    console.error("Error fetching products:", error);
+    throw error; // Vuelve a lanzar el error si necesitas manejarlo en otro lugar.
   }
 }
 
-export async function muestra(products) {
+export async function muestra(products){
   try {
     const resp = await fetch("http://localhost:8080/products", {
       method: "POST",
-      body: JSON.stringify(products),
+      body: JSON.stringify(products),  // Convertir products a JSON
       headers: {
         "Content-Type": "application/json",
-      },
-      credentials: 'include'
+      }
     });
 
     if (!resp.ok) {
-      throw new Error(`¡Error HTTP! Estado: ${resp.status}`);
+      throw new Error(`HTTP error! Status: ${resp.status}`);
     }
 
     const data = await resp.json();
     return data;
   } catch (error) {
-    console.error("Error al mostrar los productos:", error);
-    throw error;
+    console.error("Error fetching products:", error);
+    throw error; // Vuelve a lanzar el error si necesitas manejarlo en otro lugar.
   }
 }
 
 export async function deleteProduct(id) {
   try {
-    if (!id) throw new Error("ID del producto no válido");
-    
-    const cleanId = id.toString().trim();
-    const resp = await fetch(`http://localhost:8080/products/${cleanId}`, {
+    const resp = await fetch(`http://localhost:8080/products/eliminar/${id}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
       },
-      credentials: 'include'
     });
 
     if (!resp.ok) {
-      const errorData = await resp.text();
-      throw new Error(`Error HTTP: ${resp.status} - ${errorData}`);
+      const errorText = await resp.text(); // Captura errores como texto
+      throw new Error(`HTTP error! Status: ${resp.status}. ${errorText}`);
     }
 
-    // Esperar la respuesta completa del servidor
-    const data = await resp.json().catch(() => ({ success: resp.ok }));
-    return data;
+    const data = await resp.json(); // Ahora se puede interpretar como JSON
+    return data; // Devuelve el mensaje de confirmación
   } catch (error) {
     console.error("Error al eliminar el producto:", error);
     throw error;

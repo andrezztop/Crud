@@ -65,7 +65,7 @@
 </template>
 
 <script setup>
-import { onBeforeMount, ref, computed, onMounted } from 'vue'
+import { onBeforeMount, ref, onMounted } from 'vue';
 import DataTable from 'datatables.net-vue3';
 import DataTablesCore from 'datatables.net-dt';
 import 'datatables.net-responsive';
@@ -77,16 +77,83 @@ import { getProduct, deleteProduct } from '../services/productService';
 DataTable.use(DataTablesCore);
 
 const dataTable = ref(null);
+const products = ref([]);
+const searchQuery = ref('');
+const isModalOpen = ref(false);
+
+const options = {
+  responsive: true,
+  select: true,
+  language: language,
+  searching: false
+};
+
+const columns = [
+  { data: 'title', title: 'Titulo', className: 'px-6 py-4 text-sm text-gray-900' },
+  { data: 'category', title: 'Categoria', className: 'px-6 py-4 text-sm text-gray-900' },
+  { data: 'price', title: 'Precio', className: 'px-6 py-4 text-sm text-gray-900' },
+  { data: 'meta.barcode', title: 'Codigo de Barra', className: 'px-6 py-4 text-sm text-gray-900' },
+  {
+    data: null,
+    title: 'Acciones',
+    className: 'px-6 py-4 text-sm text-gray-900',
+    render: (data, type, row) => `
+      <div class="flex space-x-2">
+        <button class="view-btn bg-blue-600 text-white px-3 py-1 rounded">Ver</button>
+        <button class="edit-btn bg-green-600 text-white px-3 py-1 rounded">Editar</button>
+        <button class="delete-btn bg-red-600 text-white px-3 py-1 rounded" data-id="${row.id}">Eliminar</button>
+      </div>
+    `
+  }
+];
+
+const openModal = () => isModalOpen.value = true;
+const closeModal = () => isModalOpen.value = false;
+
+const handleFormSubmit = async () => {
+  try {
+    await reloadTable();
+    closeModal();
+  } catch (error) {
+    console.error('Error al enviar el formulario:', error);
+  }
+};
+
+const reloadTable = async () => {
+  try {
+    const newData = await getProduct();
+    products.value = newData;
+
+    if (dataTable.value?.dt) {
+      dataTable.value.dt.clear();
+      dataTable.value.dt.rows.add(newData);
+      dataTable.value.dt.draw();
+    }
+  } catch (error) {
+    console.error('Error recargando la tabla:', error);
+  }
+};
 
 const eliminar = async (id) => {
   try {
     const result = await deleteProduct(id);
-    if (result) {
+    if (result.success) {
       console.log('Producto eliminado exitosamente');
-      await reloadTable(); // Este es el punto clave
+      try {
+    const newData = await getProduct();
+    products.value = newData;
+
+    if (dataTable.value?.dt) {
+      dataTable.value.dt.clear();
+      dataTable.value.dt.rows.add(newData);
+      dataTable.value.dt.draw();
     }
   } catch (error) {
-    console.error("Error al eliminar el producto:", error);
+    console.error('Error recargando la tabla:', error);
+  }
+    }
+  } catch (error) {
+    console.error('Error al eliminar el producto:', error);
   }
 };
 
@@ -96,128 +163,22 @@ const handleDelete = (id) => {
   }
 };
 
-const reloadTable = async () => {
-  try {
-    const newData = await getProduct();
-    products.value = newData;
-    
-    if (dataTable.value?.dt) {
-      await new Promise(resolve => setTimeout(resolve, 100)); // Pequeño delay para asegurar la actualización
-      dataTable.value.dt.clear();
-      dataTable.value.dt.rows.add(newData);
-      dataTable.value.dt.draw();
-    }
-  } catch (error) {
-    console.error("Error recargando la tabla:", error);
-  }
-};
-
-
 onBeforeMount(async () => {
   try {
-    const data = await getProduct()
-    products.value = data
+    const data = await getProduct();
+    products.value = data;
   } catch (error) {
-    console.error("Error en onBeforeMount:", error)
+    console.error('Error en onBeforeMount:', error);
   }
 });
 
-const options = {
-  responsive: true,
-  select: true,
-  language: language,
-  searching: false
-};
-
-const products = ref([])
-const searchQuery = ref('')
-const columns = [
-  { 
-    data: 'title',
-    title: 'Titulo',
-    className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900'
-  },
-  { 
-    data: 'category',
-    title: 'Categoria',
-    className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900'
-  },
-  { 
-    data: 'price',
-    title: 'Precio',
-    className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900'
-  },
-  { 
-    data: 'meta.barcode',
-    title: 'Codigo de Barra',
-    className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900'
-  },
-  { 
-    data: 'price',
-    title: 'Precio USD',
-    className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900'
-  },
-  {
-    data: null,
-    title: 'Acciones',
-    className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
-    render: function (data, type, row) {
-      // Asegúrate de que row._id existe y lo usamos correctamente
-      return `
-        <div class="flex justify-end space-x-2">
-          <button class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            Ver
-          </button>
-          <button class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-            Editar
-          </button>
-          <button 
-            class="delete-btn inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            data-id="${row._id || row.id}">
-            Eliminar
-          </button>
-        </div>
-      `;
-    }
-}
-];
-
-const isModalOpen = ref(false)
-
-const openModal = () => {
-  isModalOpen.value = true
-}
-
-const closeModal = () => {
-  isModalOpen.value = false
-}
-
-const handleFormSubmit = async (formData) => {
-  try {
-    console.log('Form submitted:', formData)
-    await reloadTable()  // Recargar la tabla después de enviar el formulario
-    closeModal()
-  } catch (error) {
-    console.error("Error handling form submit:", error)
-  }
-}
-
 onMounted(() => {
-  document.addEventListener('click', function(e) {
+  document.addEventListener('click', (e) => {
     const deleteBtn = e.target.closest('.delete-btn');
     if (deleteBtn) {
       const id = deleteBtn.getAttribute('data-id');
-      if (id) {
-        handleDelete(id);
-      } else {
-        console.error('No se encontró ID del producto');
-      }
+      if (id) handleDelete(id);
     }
   });
-
-  // Opcional: Limpieza del event listener
-  return () => {
-    document.removeEventListener('click', handleClick);
-  };
 });
 </script>
