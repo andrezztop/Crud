@@ -146,6 +146,11 @@ const columns = [
     title: 'Codigo de Barra',
     className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900'
   },
+  { 
+    data: 'price',
+    title: 'Precio USD',
+    className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900'
+  },
   {
     data: null,
     title: 'Acciones',
@@ -161,7 +166,7 @@ const columns = [
           </button>
             <button 
               class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              @click= "eliminar(row.id)">
+              @click="eliminar(row.id)">
               Eliminar
             </button>
         </div>
