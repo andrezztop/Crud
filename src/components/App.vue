@@ -27,58 +27,95 @@
 
       <!-- Data Table Area -->
       <DataTable :columns="columns" :options="options" class="display">
-          <thead>
-              <tr>
-                  <th>First</th>
-                  <th>Second</th>
-              </tr>
-          </thead>
+        <thead>
+          <tr>
+            <th>First</th>
+            <th>Second</th>
+          </tr>
+        </thead>
       </DataTable>
       
       <!-- Add Button -->
       <div class="flex justify-end">
         <button
-          @click="handleAdd"
+          @click="openModal"
           class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Agregar
         </button>
       </div>
     </div>
+
+    <!-- Modal Component -->
+    <ProductFormModal 
+      v-if="isModalOpen" 
+      @close="closeModal"
+      @submit="handleFormSubmit"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { onBeforeMount, ref, computed } from 'vue'
 import DataTable from 'datatables.net-vue3';
 import DataTablesCore from 'datatables.net-dt';
 import 'datatables.net-responsive';
 import 'datatables.net-select';
 import language from 'datatables.net-plugins/i18n/es-ES.mjs';
-import { Search } from 'lucide-react';
+import ProductFormModal from './Modal/modal.vue';
+import {getProduct} from '../services/productService';
  
 DataTable.use(DataTablesCore);
+
+onBeforeMount(async () => {
+  try {
+    const data = await getProduct();
+    console.log(data);
+  } catch (error) {
+    console.error("Error en onBeforeMount:", error);
+  }
+});
 
 const options = {
   responsive: true,
   select: true,
   language: language,
-  searching:false
+  searching: false
 };
 
 const searchQuery = ref('')
 const columns = [
-  { data: 'name', title: 'Nombre' },
-  { data: 'descripcion', title: 'Descripcion' },
+  { data: 'title', title: 'Titulo' },
   { data: 'category', title: 'Categoria' },
-  { data: 'desc', title: 'Descuento' },
-  { data: 'precio', title: 'Precio' },
-  { data: 'action', title: 'Acciones' },
+  { data: 'price', title: 'Precio' },
+  { data: 'barcode', title: 'Codigo de Barra' },
+  { 
+    data: null, 
+    title: 'Acciones',
+    render: function (data, type, row) {
+      return `
+        <button class="view-button">Ver</button>
+        <button class="edit-button">Editar</button>
+        <button class="delete-button">Eliminar</button>
+      `;
+    }
+  },
 ];
 const hasData = computed(() => data.value.length > 0)
 
-const handleAdd = () => {
-  // Implement add functionality
-  console.log('Add button clicked')
+const isModalOpen = ref(false)
+
+const openModal = () => {
+  isModalOpen.value = true
+}
+
+const closeModal = () => {
+  isModalOpen.value = false
+}
+
+const handleFormSubmit = (formData) => {
+  console.log('Form submitted:', formData)
+  // Aquí puedes implementar la lógica para agregar el nuevo producto a tu lista o enviarlo a una API
+  closeModal()
 }
 </script>
