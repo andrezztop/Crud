@@ -106,9 +106,8 @@
   
                     <div>
                       <label for="barcode" class="block text-sm font-medium text-gray-700">Código de barras</label>
-                      <input type="text" id="barcode" v-model="form.barcode" @blur="validateField('barcode')"
+                      <input type="text" id="barcode" v-model="form.meta.barcode" @blur="validateField('barcode')"
                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                      <p v-if="errors.barcode" class="mt-1 text-sm text-red-600">{{ errors.barcode }}</p>
                     </div>
   
                     <div>
@@ -140,17 +139,25 @@
                     </div>
   
                     <div>
-                      <label for="warrantyInformation" class="block text-sm font-medium text-gray-700">Información de garantía</label>
-                      <div class="flex space-x-2">
-                        <input type="number" id="warrantyDuration" v-model="form.warrantyDuration" @blur="validateField('warrantyDuration')"
-                               class="mt-1 block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                        <select v-model="form.warrantyUnit" class="mt-1 block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                          <option value="dias">Días</option>
-                          <option value="meses">Meses</option>
-                          <option value="años">Años</option>
-                        </select>
-                      </div>
-                      <p v-if="errors.warrantyDuration" class="mt-1 text-sm text-red-600">{{ errors.warrantyDuration }}</p>
+                    <label for="warrantyInformation" class="block text-sm font-medium text-gray-700">Información de garantía</label>
+                    <div class="flex space-x-2">
+                      <input 
+                        type="number" 
+                        id="warrantyDuration" 
+                        v-model="form.warrantyDuration" 
+                        @blur="updateWarrantyInformation"
+                        class="mt-1 block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                      
+                      <select 
+                        v-model="form.warrantyUnit" 
+                        @change="updateWarrantyInformation"
+                        class="mt-1 block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <option value="días">Días</option>
+                        <option value="meses">Meses</option>
+                        <option value="años">Años</option>
+                      </select>
+                    </div>
+                      <p v-if="errors.warrantyInformation" class="mt-1 text-sm text-red-600">{{ errors.warrantyInformation }}</p>
                     </div>
   
                     <div>
@@ -202,9 +209,9 @@
   
                     <div>
                     <label for="image" class="block text-sm font-medium text-gray-700">URL de la imagen</label>
-                    <input type="url" id="image" v-model="form.image" @blur="validateField('image')"
+                    <input type="url" id="images" v-model="form.images" @blur="validateField('images')"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    <p v-if="errors.image" class="mt-1 text-sm text-red-600">{{ errors.image }}</p>
+                    <p v-if="errors.images" class="mt-1 text-sm text-red-600">{{ errors.images }}</p>
                     </div>
   
                     <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
@@ -228,40 +235,59 @@
   </template>
   
   <script setup>
-  import { ref, reactive, computed } from 'vue'
+  import { ref, reactive, computed, watch} from 'vue'
   import {muestra} from '../../services/productService';
+
   
   const categories = ref(['tecnologia', 'medicina', 'maquillaje'])
   const showCustomCategory = ref(false)
   const customCategory = ref('')
   
   const form = reactive({
-    title: '',
-    description: '',
-    category: '',
-    price: null,
-    discountPercentage: null,
-    rating: null,
-    stock: null,
-    brand: '',
-    sku: '',
-    barcode: '',
-    weight: null,
-    dimensions: {
-      width: null,
-      height: null,
-      depth: null
-    },
-    warrantyDuration: null,
-    warrantyUnit: 'dias',
-    shippingInformation: '',
-    returnPolicy: '',
-    minimumOrderQuantity: null,
-    reviews: [],
-    image: null
-  })
+      title: '',
+      description: '',
+      category: '',
+      price: null,
+      discountPercentage: null,
+      rating: null,
+      stock: null,
+      availabilityStatus:null,
+      brand: '',
+      sku: '',
+      weight: null,
+      dimensions: {
+        width: null,
+        height: null,
+        depth: null
+      },
+      warrantyInformation: null, // Concatenación de duración y unidad
+      shippingInformation: '',
+      returnPolicy: '',
+      minimumOrderQuantity: null,
+      reviews: [],
+      images: null,
+      meta:{
+        barcode: '',
+      }
+    });
   
   const errors = reactive({})
+
+
+    // Function to update warrantyInformation based on inputs
+    const updateWarrantyInformation = () => {
+      if (form.warrantyDuration && form.warrantyUnit) {
+        form.warrantyInformation = `${form.warrantyDuration} ${form.warrantyUnit}`;
+      } else {
+        form.warrantyInformation = null;
+      }
+    };
+
+    // Watcher to automatically update warrantyInformation
+    watch(
+      [() => form.warrantyDuration, () => form.warrantyUnit],
+      updateWarrantyInformation
+    );
   
   const validateField = (field) => {
     errors[field] = ''
@@ -288,8 +314,8 @@
       case 'brand':
         if (!form.brand) errors.brand = 'La marca es requerida'
         break
-      case 'image':
-        if (!form.image) errors.image = 'La imagen es requerida'
+      case 'images':
+        if (!form.images) errors.images = 'La imagen es requerida'
         break
       case 'warrantyDuration':
         if (form.warrantyDuration === null) errors.warrantyDuration = 'La duración de la garantía es requerida'
@@ -311,32 +337,21 @@
   
   const submitForm = async () => {
   if (validateForm()) {
-    const formData = new FormData();
-    for (const [key, value] of Object.entries(form)) {
-      if (key === 'dimensions' || key === 'reviews') {
-        formData.append(key, JSON.stringify(value));
-      } else if (key === 'image' && value instanceof File) {
-        formData.append(key, value, value.name);
-      } else {
-        formData.append(key, value);
-      }
     }
-    formData.append('availabilityStatus', availabilityStatus.value);
-    formData.append('createdAt', new Date().toISOString());
-    formData.append('updatedAt', new Date().toISOString());
-
-    console.log('Formulario enviado:', Object.fromEntries(formData));
+    // Log para verificar los datos de FormData
+    //console.log('Formulario enviado:', Object.fromEntries(formData.entries()));
 
     try {
-      const response = await muestra(formData);
+      const response = await muestra(form);
       console.log('Respuesta de la API:', response);
       emit('submit', response);
     } catch (error) {
       console.error('Error al enviar el formulario:', error);
-      // Handle the error appropriately (e.g., show an error message to the user)
+      // Manejar el error adecuadamente (por ejemplo, mostrar un mensaje de error al usuario)
     }
   }
-}
+
+
   const addReview = () => {
     form.reviews.push({
       rating: 5,
@@ -361,13 +376,6 @@
       form.category = customCategory.value
       customCategory.value = ''
       showCustomCategory.value = false
-    }
-  }
-  
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      form.image = file;
     }
   }
   

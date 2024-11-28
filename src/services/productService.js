@@ -35,3 +35,25 @@ export async function muestra(products){
     throw error; // Vuelve a lanzar el error si necesitas manejarlo en otro lugar.
   }
 }
+
+export async function deleteProduct(id) {
+  try {
+    const resp = await fetch(`http://localhost:8080/products/eliminar/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id })
+    });
+
+    if (!resp.ok) {
+      throw new Error(`HTTP error! Status: ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    return data;
+  } catch (error) {
+    console.error("Error al eliminar el producto:", error);
+    throw error;
+  }
+}
