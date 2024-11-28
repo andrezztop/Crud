@@ -65,29 +65,34 @@
 </template>
 
 <script setup>
-import { onBeforeMount, ref, computed } from 'vue'
+import { onBeforeMount, ref, computed, onMounted } from 'vue'
 import DataTable from 'datatables.net-vue3';
 import DataTablesCore from 'datatables.net-dt';
 import 'datatables.net-responsive';
 import 'datatables.net-select';
 import language from 'datatables.net-plugins/i18n/es-ES.mjs';
 import ProductFormModal from './Modal/modal.vue';
-import { getProduct } from '../services/productService';
-import { deleteProduct } from '../services/productService';
+import { getProduct, deleteProduct } from '../services/productService';
 
 DataTable.use(DataTablesCore);
 
-const tableRef = ref(null)
+const dataTable = ref(null);
 
 const eliminar = async (id) => {
   try {
     const result = await deleteProduct(id);
-    // Actualizar la tabla después de eliminar el registro
-    reloadTable();
-    return result;
+    if (result) {
+      console.log('Producto eliminado exitosamente');
+      await reloadTable(); // Este es el punto clave
+    }
   } catch (error) {
     console.error("Error al eliminar el producto:", error);
-    throw error; // Vuelve a lanzar el error si necesitas manejarlo en otro lugar.
+  }
+};
+
+const handleDelete = (id) => {
+  if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+    eliminar(id);
   }
 };
 
@@ -95,11 +100,12 @@ const reloadTable = async () => {
   try {
     const newData = await getProduct();
     products.value = newData;
-    if (tableRef.value) {
-      const dt = tableRef.value.dt;
-      dt.clear();
-      dt.rows.add(newData);
-      dt.draw();
+    
+    if (dataTable.value?.dt) {
+      await new Promise(resolve => setTimeout(resolve, 100)); // Pequeño delay para asegurar la actualización
+      dataTable.value.dt.clear();
+      dataTable.value.dt.rows.add(newData);
+      dataTable.value.dt.draw();
     }
   } catch (error) {
     console.error("Error recargando la tabla:", error);
@@ -156,6 +162,7 @@ const columns = [
     title: 'Acciones',
     className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
     render: function (data, type, row) {
+      // Asegúrate de que row._id existe y lo usamos correctamente
       return `
         <div class="flex justify-end space-x-2">
           <button class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
@@ -164,17 +171,16 @@ const columns = [
           <button class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
             Editar
           </button>
-            <button 
-              class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              @click="eliminar(row.id)">
-              Eliminar
-            </button>
+          <button 
+            class="delete-btn inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            data-id="${row._id || row.id}">
+            Eliminar
+          </button>
         </div>
       `;
     }
-  }
-]
-
+}
+];
 
 const isModalOpen = ref(false)
 
@@ -195,4 +201,23 @@ const handleFormSubmit = async (formData) => {
     console.error("Error handling form submit:", error)
   }
 }
+
+onMounted(() => {
+  document.addEventListener('click', function(e) {
+    const deleteBtn = e.target.closest('.delete-btn');
+    if (deleteBtn) {
+      const id = deleteBtn.getAttribute('data-id');
+      if (id) {
+        handleDelete(id);
+      } else {
+        console.error('No se encontró ID del producto');
+      }
+    }
+  });
+
+  // Opcional: Limpieza del event listener
+  return () => {
+    document.removeEventListener('click', handleClick);
+  };
+});
 </script>
