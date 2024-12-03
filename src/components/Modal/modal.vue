@@ -335,22 +335,22 @@
     return isValid
   }
   
-  const submitForm = async () => {
-  if (validateForm()) {
+ const submitForm = async () => {
+    if (validateForm()) {
+      try {
+        const formData = { ...form };
+        // If editing, use updateProduct, otherwise use createProduct
+        const response = props.product 
+          ? await updateProduct(props.product.id, formData)
+          : await muestra(formData);
+        
+        emit('submit', response);
+        emit('close');
+      } catch (error) {
+        console.error('Error al enviar el formulario:', error);
+      }
     }
-    // Log para verificar los datos de FormData
-    //console.log('Formulario enviado:', Object.fromEntries(formData.entries()));
-
-    try {
-      const response = await muestra(form);
-      console.log('Respuesta de la API:', response);
-      emit('submit', response);
-    } catch (error) {
-      console.error('Error al enviar el formulario:', error);
-      // Manejar el error adecuadamente (por ejemplo, mostrar un mensaje de error al usuario)
-    }
-  }
-
+  };
 
   const addReview = () => {
     form.reviews.push({
