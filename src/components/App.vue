@@ -120,19 +120,19 @@
                 type="number"
                 v-model="formData.discountPercentage"
                 step="0.01"
+                min="0"
+                max="95"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700">Calificación</label>
+              <label class="block text-sm font-medium text-gray-700">Precio con descuento</label>
               <input
                 type="number"
-                v-model="formData.rating"
-                step="0.1"
-                min="0"
-                max="5"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                :value="discountedPrice"
+                disabled
+                class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm"
               />
             </div>
 
@@ -275,7 +275,7 @@
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label :for="'rating-'+index" class="block text-xs text-gray-500">Calificación</label>
-                  <input type="number" :id="'rating-'+index" v-model="review.rating" min="1" max="5"
+                  <input type="number" :id="'rating-'+index" v-model="review.rating" min="1" max="5" step="0.1"
                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
                 <div>
@@ -293,6 +293,16 @@
             <button type="button" @click="addReview" class="mt-2 px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
               Agregar reseña
             </button>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Rating promedio</label>
+            <input
+              type="number"
+              :value="averageRating"
+              disabled
+              class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm"
+            />
           </div>
 
           <div class="flex justify-end space-x-3 mt-6">
@@ -313,17 +323,61 @@
         </form>
       </div>
     </div>
+
+    <!-- View Product Modal -->
+    <div v-if="isViewModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 overflow-y-auto max-h-[90vh]">
+        <h2 class="text-xl font-semibold mb-4">Detalles del Producto</h2>
+        <div v-if="selectedProduct" class="space-y-4">
+          <p><strong>Título:</strong> {{ selectedProduct.title }}</p>
+          <p><strong>Descripción:</strong> {{ selectedProduct.description }}</p>
+          <p><strong>Categoría:</strong> {{ selectedProduct.category }}</p>
+          <p><strong>Precio original:</strong> ${{ selectedProduct.price.toFixed(2) }}</p>
+          <p><strong>Descuento:</strong> {{ selectedProduct.discountPercentage }}%</p>
+          <p><strong>Precio con descuento:</strong> ${{ (selectedProduct.price * (1 - selectedProduct.discountPercentage / 100)).toFixed(2) }}</p>
+          <p><strong>Stock:</strong> {{ selectedProduct.stock }}</p>
+          <p><strong>Marca:</strong> {{ selectedProduct.brand }}</p>
+          <p><strong>SKU:</strong> {{ selectedProduct.sku }}</p>
+          <p><strong>Código de Barras:</strong></p>
+          <svg ref="barcodeContainer"></svg>
+          <p><strong>Peso:</strong> {{ selectedProduct.weight }} kg</p>
+          <p><strong>Dimensiones:</strong> {{ selectedProduct.dimensions.width }}x{{ selectedProduct.dimensions.height }}x{{ selectedProduct.dimensions.depth }} cm</p>
+          <p><strong>Garantía:</strong> {{ selectedProduct.warrantyDuration }} {{ selectedProduct.warrantyUnit }}</p>
+          <p><strong>Información de Envío:</strong> {{ selectedProduct.shippingInformation }}</p>
+          <p><strong>Política de Devolución:</strong> {{ selectedProduct.returnPolicy }}</p>
+          <p><strong>Cantidad Mínima de Pedido:</strong> {{ selectedProduct.minimumOrderQuantity }}</p>
+          <p><strong>Rating promedio:</strong> {{ averageRating }}</p>
+          <div>
+            <strong>Reseñas:</strong>
+            <div v-for="(review, index) in selectedProduct.reviews" :key="index" class="mt-2 p-2 border rounded">
+              <p><strong>Calificación:</strong> {{ review.rating }}/5</p>
+              <p><strong>Revisor:</strong> {{ review.reviewerName }}</p>
+              <p><strong>Comentario:</strong> {{ review.comment }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end">
+          <button
+            @click="closeViewModal"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { onBeforeMount, ref, computed, watch, onMounted } from 'vue';
+import { onBeforeMount, ref, computed, watch, onMounted, nextTick } from 'vue';
 import DataTable from 'datatables.net-vue3';
 import DataTablesCore from 'datatables.net';
 import 'datatables.net-responsive';
 import 'datatables.net-select';
 import language from 'datatables.net-plugins/i18n/es-ES.mjs';
 import { getProduct, updateProduct, deleteProduct, muestra } from '../services/productService';
+import JsBarcode from 'jsbarcode';
 
 DataTable.use(DataTablesCore);
 
@@ -331,10 +385,12 @@ const dataTable = ref(null);
 const products = ref([]);
 const searchQuery = ref('');
 const isModalOpen = ref(false);
+const isViewModalOpen = ref(false);
 const selectedProduct = ref(null);
 const categories = ref(['tecnologia', 'medicina', 'maquillaje']);
 const showCustomCategory = ref(false);
 const customCategory = ref('');
+const barcodeContainer = ref(null);
 
 const formData = ref({
   title: '',
@@ -342,7 +398,6 @@ const formData = ref({
   category: '',
   price: null,
   discountPercentage: null,
-  rating: null,
   stock: null,
   brand: '',
   sku: '',
@@ -370,15 +425,29 @@ const options = {
   language: language,
   searching: false,
   rowCallback: function(row, data) {
-    // Add click handlers to buttons
+    const viewBtn = row.querySelector('.view-btn');
     const editBtn = row.querySelector('.edit-btn');
     const deleteBtn = row.querySelector('.delete-btn');
     
+    if (viewBtn) {
+      viewBtn.onclick = () => handleView(data.id);
+    }
     if (editBtn) {
       editBtn.onclick = () => handleEdit(data.id);
     }
     if (deleteBtn) {
       deleteBtn.onclick = () => handleDelete(data.id);
+    }
+
+    // Generar código de barras en la tabla
+    const barcodeElement = row.querySelector(`#barcode-${data.id}`);
+    if (barcodeElement && data.meta && data.meta.barcode) {
+      JsBarcode(barcodeElement, data.meta.barcode, {
+        format: "CODE128",
+        width: 1,
+        height: 30,
+        displayValue: false
+      });
     }
   }
 };
@@ -389,7 +458,10 @@ const columns = [
   { 
     data: 'price', 
     title: 'Precio',
-    render: (data) => `$${parseFloat(data).toFixed(2)}` 
+    render: (data, type, row) => {
+      const discountedPrice = data * (1 - row.discountPercentage / 100);
+      return `$${discountedPrice.toFixed(2)}`;
+    }
   },
   { 
     data: 'stock', 
@@ -398,7 +470,16 @@ const columns = [
   },
   { data: 'brand', title: 'Marca' },
   { data: 'sku', title: 'SKU' },
-  { data: 'meta.barcode', title: 'Código de Barra' },
+  { 
+    data: 'meta.barcode', 
+    title: 'Código de Barra',
+    render: function(data, type, row) {
+      if (type === 'display') {
+        return `<svg id="barcode-${row.id}"></svg>`;
+      }
+      return data;
+    }
+  },
   {
     data: null,
     title: 'Acciones',
@@ -418,17 +499,30 @@ const columns = [
   }
 ];
 
+const averageRating = computed(() => {
+  if (formData.value.reviews.length === 0) return 0;
+  const sum = formData.value.reviews.reduce((acc, review) => acc + Number(review.rating), 0);
+  return (sum / formData.value.reviews.length).toFixed(1);
+});
+
+const discountedPrice = computed(() => {
+  const price = Number(formData.value.price);
+  const discount = Number(formData.value.discountPercentage);
+  if (isNaN(price) || isNaN(discount)) return price;
+  return (price * (1 - discount / 100)).toFixed(2);
+});
+
 const openModal = () => {
-    selectedProduct.value = null;
-    resetFormData();
-    isModalOpen.value = true;
-  };
+  selectedProduct.value = null;
+  resetFormData();
+  isModalOpen.value = true;
+};
 
 const handleCloseModal = () => {
-    selectedProduct.value = null;
-    resetFormData();
-    isModalOpen.value = false;
-  };
+  selectedProduct.value = null;
+  resetFormData();
+  isModalOpen.value = false;
+};
 
 const resetFormData = () => {
   formData.value = {
@@ -437,7 +531,6 @@ const resetFormData = () => {
     category: '',
     price: null,
     discountPercentage: null,
-    rating: null,
     stock: null,
     brand: '',
     sku: '',
@@ -464,6 +557,8 @@ const handleFormSubmit = async () => {
   try {
     const productData = { ...formData.value };
     productData.warrantyInformation = `${productData.warrantyDuration} ${productData.warrantyUnit}`;
+    productData.rating = averageRating.value;
+    productData.price = Number(formData.value.price);
     
     if (selectedProduct.value) {
       await updateProduct(selectedProduct.value.id, productData);
@@ -472,7 +567,6 @@ const handleFormSubmit = async () => {
     }
     handleCloseModal();
     await reloadTable();
-    window.location.reload();
   } catch (error) {
     console.error('Error al enviar el formulario:', error);
   }
@@ -487,6 +581,21 @@ const reloadTable = async () => {
       dataTable.value.dt.clear();
       dataTable.value.dt.rows.add(newData);
       dataTable.value.dt.draw();
+      
+      // Regenerar códigos de barras después de recargar la tabla
+      nextTick(() => {
+        newData.forEach(product => {
+          const barcodeElement = document.querySelector(`#barcode-${product.id}`);
+          if (barcodeElement && product.meta && product.meta.barcode) {
+            JsBarcode(barcodeElement, product.meta.barcode, {
+              format: "CODE128",
+              width: 1,
+              height: 30,
+              displayValue: false
+            });
+          }
+        });
+      });
     }
   } catch (error) {
     console.error('Error recargando la tabla:', error);
@@ -510,17 +619,40 @@ const handleDelete = async (id) => {
   if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
     try {
       await deleteProduct(id);
-      const updatedProducts = products.value.filter(p => p.id !== id);
-      products.value = updatedProducts;
-      if (dataTable.value?.dt) {
-        dataTable.value.dt.clear();
-        dataTable.value.dt.rows.add(updatedProducts);
-        dataTable.value.dt.draw();
-        window.location.reload();
-      }
+      await reloadTable();
     } catch (error) {
       console.error('Error al eliminar el producto:', error);
     }
+  }
+};
+
+const handleView = async (id) => {
+  try {
+    const productToView = products.value.find(p => p.id === parseInt(id));
+    if (productToView) {
+      selectedProduct.value = { ...productToView };
+      isViewModalOpen.value = true;
+      await nextTick();
+      renderBarcode();
+    }
+  } catch (error) {
+    console.error('Error al preparar la vista:', error);
+  }
+};
+
+const closeViewModal = () => {
+  isViewModalOpen.value = false;
+  selectedProduct.value = null;
+};
+
+const renderBarcode = () => {
+  if (barcodeContainer.value && selectedProduct.value?.meta?.barcode) {
+    JsBarcode(barcodeContainer.value, selectedProduct.value.meta.barcode, {
+      format: "CODE128",
+      width: 2,
+      height: 100,
+      displayValue: true
+    });
   }
 };
 

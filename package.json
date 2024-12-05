@@ -18,6 +18,7 @@
     "datatables.net-select-dt": "^2.1.0",
     "datatables.net-vue3": "^3.0.2",
     "jquery": "^3.7.1",
+    "jsbarcode": "^3.11.6",
     "vue": "^3.5.12"
   },
   "devDependencies": {
