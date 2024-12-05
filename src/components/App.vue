@@ -276,12 +276,12 @@
                 <div>
                   <label :for="'rating-'+index" class="block text-xs text-gray-500">Calificación</label>
                   <input type="number" :id="'rating-'+index" v-model="review.rating" min="1" max="5" step="0.1"
-                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
                 <div>
                   <label :for="'reviewer-'+index" class="block text-xs text-gray-500">Nombre del revisor</label>
                   <input type="text" :id="'reviewer-'+index" v-model="review.reviewerName"
-                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
               </div>
               <div class="mt-2">
@@ -346,7 +346,7 @@
           <p><strong>Información de Envío:</strong> {{ selectedProduct.shippingInformation }}</p>
           <p><strong>Política de Devolución:</strong> {{ selectedProduct.returnPolicy }}</p>
           <p><strong>Cantidad Mínima de Pedido:</strong> {{ selectedProduct.minimumOrderQuantity }}</p>
-          <p><strong>Rating promedio:</strong> {{ averageRating }}</p>
+          <p><strong>Rating promedio:</strong> {{ selectedProduct.rating }}</p>
           <div>
             <strong>Reseñas:</strong>
             <div v-for="(review, index) in selectedProduct.reviews" :key="index" class="mt-2 p-2 border rounded">
@@ -572,47 +572,63 @@ const handleFormSubmit = async () => {
   }
 };
 
-const reloadTable = async () => {
-  try {
-    const newData = await getProduct();
-    products.value = newData;
-
-    if (dataTable.value?.dt) {
-      dataTable.value.dt.clear();
-      dataTable.value.dt.rows.add(newData);
-      dataTable.value.dt.draw();
-      
-      // Regenerar códigos de barras después de recargar la tabla
-      nextTick(() => {
-        newData.forEach(product => {
-          const barcodeElement = document.querySelector(`#barcode-${product.id}`);
-          if (barcodeElement && product.meta && product.meta.barcode) {
-            JsBarcode(barcodeElement, product.meta.barcode, {
-              format: "CODE128",
-              width: 1,
-              height: 30,
-              displayValue: false
-            });
-          }
-        });
-      });
-    }
-  } catch (error) {
-    console.error('Error recargando la tabla:', error);
-  }
-};
-
 const handleEdit = async (id) => {
   try {
     const productToEdit = products.value.find(p => p.id === parseInt(id));
+    console.log(productToEdit)
     if (productToEdit) {
       selectedProduct.value = { ...productToEdit };
-      formData.value = { ...productToEdit };
+      formData.value = { ...productToEdit }; // Esto incluye las reseñas
       isModalOpen.value = true;
     }
   } catch (error) {
     console.error('Error al preparar la edición:', error);
   }
+};
+
+const reloadTable = async () => {
+  try {
+    // Actualiza tus datos internos
+    const newData = await getUpdatedData(); // Función que obtenga los nuevos datos
+
+    // Destruye la tabla existente (si existe)
+    if (dataTable.value?.dt) {
+      dataTable.value.dt.destroy();
+    }
+
+    // Actualiza los datos internos
+    products.value = newData;
+
+    // Re-inicializa la tabla con los nuevos datos
+    if (dataTable.value) {
+      dataTable.value.dt = await new DataTablesCore().use(plugins => [
+        plugins.dataTable(),
+        plugins.select(),
+        plugins.responsive(),
+        plugins.i18n(language)
+      ]);
+
+      dataTable.value.dt.clear().rows.add(newData).draw();
+    }
+
+    // Regenera códigos de barras después de recargar la tabla
+    nextTick(() => {
+      newData.forEach(product => {
+        const barcodeElement = document.querySelector(`#barcode-${product.id}`);
+        if (barcodeElement && product.meta && product.meta.barcode) {
+          JsBarcode(barcodeElement, product.meta.barcode, {
+            format: "CODE128",
+            width: 1,
+            height: 30,
+            displayValue: false
+          });
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error recargando la tabla:', error);
+  }
+  window.location.reload();
 };
 
 const handleDelete = async (id) => {
@@ -624,6 +640,7 @@ const handleDelete = async (id) => {
       console.error('Error al eliminar el producto:', error);
     }
   }
+  window.location.reload();
 };
 
 const handleView = async (id) => {
@@ -665,14 +682,6 @@ const addReview = () => {
   });
 };
 
-const onCategoryChange = () => {
-  if (formData.value.category === 'custom') {
-    showCustomCategory.value = true;
-    formData.value.category = '';
-  } else {
-    showCustomCategory.value = false;
-  }
-};
 
 const addCustomCategory = () => {
   if (customCategory.value && !categories.value.includes(customCategory.value)) {
